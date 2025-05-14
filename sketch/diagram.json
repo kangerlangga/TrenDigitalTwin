@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "author": "Anonymous maker",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 10.2, "left": -144.6, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -61.2,
+      "left": -130.6,
+      "attrs": { "color": "red" }
+    },
+    { "type": "wokwi-hc-sr04", "id": "ultrasonic1", "top": -132.9, "left": 187.9, "attrs": {} },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": 252.8,
+      "left": -114.4,
+      "attrs": {}
+    },
+    { "type": "wokwi-servo", "id": "servo1", "top": 55.6, "left": 220.8, "attrs": {} }
+  ],
+  "connections": [
+    [ "uno:9", "ultrasonic1:TRIG", "green", [ "v-28.8", "h0.8" ] ],
+    [ "uno:8", "ultrasonic1:ECHO", "yellow", [ "v-19.2", "h250" ] ],
+    [ "led1:A", "uno:3", "orange", [ "v0", "h192" ] ],
+    [ "led1:C", "uno:GND.1", "black", [ "v9.6", "h86.8" ] ],
+    [ "ultrasonic1:GND", "uno:GND.1", "black", [ "v9.6", "h-318" ] ],
+    [ "ultrasonic1:VCC", "uno:5V", "red", [ "v259.2", "h-249.6" ] ],
+    [ "servo1:PWM", "uno:6", "blue", [ "h0" ] ],
+    [ "servo1:V+", "uno:5V", "red", [ "h-9.6", "v115.3", "h-192" ] ],
+    [ "servo1:GND", "uno:GND.3", "black", [ "h-19.2", "v134.4", "h-163.2" ] ],
+    [ "ldr1:AO", "uno:A3", "violet", [ "h0" ] ],
+    [ "ldr1:VCC", "uno:5V", "red", [ "h19.2", "v-28.8", "h-57.6" ] ],
+    [ "ldr1:GND", "uno:GND.2", "black", [ "h28.8", "v-29.2", "h-57.6" ] ]
+  ],
+  "dependencies": {}
+}
