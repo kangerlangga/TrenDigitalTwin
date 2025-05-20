@@ -1,66 +1,86 @@
-#include <Servo.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-// Pin setup
+// === PIN SETUP ===
 const int trigPin = 9;
 const int echoPin = 8;
-const int ldrPin = A3;
+const int lightSensorPin = 7; // D0 dari modul LDR
 const int ledPin = 3;
+const int relayPin = 4;
+#define DHTPIN 2
+#define DHTTYPE DHT22
 
-Servo myServo;
+// === SENSOR & MODULES ===
+DHT dht(DHTPIN, DHTTYPE);
+LiquidCrystal_I2C lcd(0x27, 16, 2); // alamat I2C umum
 
+// === VARIABLES ===
 long duration;
 int distance;
-int lightValue;
-
-const int distanceThreshold = 100;
-const int lightThreshold = 500;
+const int distanceThreshold = 100; // cm
 
 void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  pinMode(lightSensorPin, INPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(relayPin, OUTPUT);
 
-  myServo.attach(6); // Servo pada pin 6
-  myServo.write(0);  // Tutup pintu (awal)
-  
+  dht.begin();
+  lcd.begin(16, 2);
+  lcd.backlight();
+
   Serial.begin(9600);
 }
 
 void loop() {
-  // Baca sensor ultrasonik
+  // === Ultrasonik ===
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-
   duration = pulseIn(echoPin, HIGH);
   distance = duration * 0.034 / 2;
 
-  // Baca nilai LDR
-  lightValue = analogRead(ldrPin);
+  // === LDR ===
+  int lightState = digitalRead(lightSensorPin); // HIGH = gelap
+  bool gelap = (lightState == HIGH);
 
-  Serial.print("Jarak: ");
-  Serial.print(distance);
-  Serial.print(" cm, Cahaya: ");
-  Serial.println(lightValue);
+  // === DHT22 ===
+  float suhu = dht.readTemperature();
+  float kelembapan = dht.readHumidity();
 
-  if (distance > 0 && distance <= distanceThreshold) {
-    // Orang terdeteksi
-    myServo.write(90); // Buka pintu
+  // === LCD ===
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(suhu, 1);
+  lcd.print("C H:");
+  lcd.print(kelembapan, 0);
+  lcd.print("%");
 
-    if (lightValue < lightThreshold) {
-      digitalWrite(ledPin, HIGH); // Menyala hanya saat malam
-    } else {
-      digitalWrite(ledPin, LOW); // Tidak menyala saat terang
-    }
-
-    delay(3000); // Tahan posisi terbuka 3 detik
+  lcd.setCursor(0, 1);
+  if (distance > 0 && distance <= distanceThreshold && gelap) {
+    lcd.print("Status: ON ");
+    digitalWrite(ledPin, HIGH);
+    digitalWrite(relayPin, HIGH);
   } else {
-    // Tidak ada orang
-    myServo.write(0); // Tutup pintu
-    digitalWrite(ledPin, LOW); // Matikan LED
+    lcd.print("Status: OFF");
+    digitalWrite(ledPin, LOW);
+    digitalWrite(relayPin, LOW);
   }
 
-  delay(500);
+  // === Serial Debug ===
+  Serial.print("Jarak: ");
+  Serial.print(distance);
+  Serial.print(" cm | Gelap: ");
+  Serial.print(gelap ? "YA" : "TIDAK");
+  Serial.print(" | T: ");
+  Serial.print(suhu);
+  Serial.print(" C | H: ");
+  Serial.println(kelembapan);
+
+  delay(2000); // Delay untuk refresh
 }
