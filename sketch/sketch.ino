@@ -47,12 +47,11 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
-  duration = pulseIn(echoPin, HIGH, 30000); // timeout 30ms (hindari blocking lama)
-  if (duration == 0) {
-    // Jika tidak ada echo, objek terlalu jauh atau error
-    distance = -1;
-  } else {
+  duration = pulseIn(echoPin, HIGH, 30000);
+  if (duration > 100 && duration < 30000 && digitalRead(echoPin) == HIGH) {
     distance = duration * 0.034 / 2;
+  } else {
+    distance = -1;
   }
 
   // --- Sensor LDR (digital) ---
@@ -60,8 +59,10 @@ void loop() {
   bool gelap = (lightState == HIGH);
 
   // --- Sensor DHT11 ---
-  float suhu = dht.readTemperature();
-  float kelembapan = dht.readHumidity();
+  double temp = dht.readTemperature();
+  // double suhu = dht.readTemperature();
+  float suhu = temp * 10;
+  int kelembapan = dht.readHumidity();
 
   // Cek data DHT valid atau tidak
   bool dhtValid = !isnan(suhu) && !isnan(kelembapan);
@@ -100,8 +101,12 @@ void loop() {
   if (dhtValid) Serial.print(suhu);
   else Serial.print("Error");
   Serial.print(" C | H: ");
-  if (dhtValid) Serial.println(kelembapan);
-  else Serial.println("Error");
+  if (dhtValid) {
+    Serial.print(kelembapan);
+    Serial.println(" %");
+  } else {
+    Serial.println("Error");
+  }
 
   delay(2000); // Delay untuk refresh data
 }
