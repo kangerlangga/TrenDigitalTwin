@@ -5,33 +5,28 @@
 // === PIN SETUP ===
 const int trigPin = 9;
 const int echoPin = 8;
-const int lightSensorPin = 7; // D0 dari modul LDR (digital)
+const int lightSensorPin = 7;
 const int ledPin = 3;
 const int relayPin = 4;
 #define DHTPIN 2
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 
 // === SENSOR & MODULES ===
 DHT dht(DHTPIN, DHTTYPE);
-LiquidCrystal_I2C lcd(0x27, 16, 2); // alamat I2C umum
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // === VARIABLES ===
 long duration;
 int distance;
-const int distanceThreshold = 10; // cm
+const int distanceThreshold = 10;
 
 void setup() {
-  // Setup pin mode
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(lightSensorPin, INPUT);
   pinMode(ledPin, OUTPUT);
   pinMode(relayPin, OUTPUT);
 
-  // Aktifkan internal pull-up untuk pin data DHT11
-  pinMode(DHTPIN, INPUT_PULLUP);
-
-  // Inisialisasi sensor & LCD
   dht.begin();
   lcd.init();
   lcd.backlight();
@@ -40,34 +35,40 @@ void setup() {
 }
 
 void loop() {
-  // --- Sensor Ultrasonik ---
+  // === Sensor Ultrasonik ===
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-
   duration = pulseIn(echoPin, HIGH, 30000);
-  if (duration > 100 && duration < 30000 && digitalRead(echoPin) == HIGH) {
+  if (duration > 100 && duration < 30000) {
     distance = duration * 0.034 / 2;
   } else {
     distance = -1;
   }
 
-  // --- Sensor LDR (digital) ---
-  int lightState = digitalRead(lightSensorPin); // HIGH = gelap
+  // === Sensor LDR (digital) ===
+  int lightState = digitalRead(lightSensorPin);
   bool gelap = (lightState == HIGH);
 
-  // --- Sensor DHT11 ---
-  double temp = dht.readTemperature();
-  // double suhu = dht.readTemperature();
-  float suhu = temp * 10;
-  int kelembapan = dht.readHumidity();
-
-  // Cek data DHT valid atau tidak
+  // === Sensor DHT22 ===
+  float suhu = dht.readTemperature();
+  float kelembapan = dht.readHumidity();
   bool dhtValid = !isnan(suhu) && !isnan(kelembapan);
 
-  // --- LCD ---
+  // === Aksi Berdasarkan Sensor ===
+  // LED hanya menyala jika gelap
+  digitalWrite(ledPin, gelap ? HIGH : LOW);
+
+  // Relay hanya menyala jika ada objek dekat
+  if (distance > 0 && distance <= distanceThreshold) {
+    digitalWrite(relayPin, HIGH);
+  } else {
+    digitalWrite(relayPin, LOW);
+  }
+
+  // === LCD Display ===
   lcd.clear();
   lcd.setCursor(0, 0);
   if (dhtValid) {
@@ -77,36 +78,26 @@ void loop() {
     lcd.print(kelembapan, 0);
     lcd.print("%");
   } else {
-    lcd.print("Sensor DHT Error");
+    lcd.print("DHT Error");
   }
 
   lcd.setCursor(0, 1);
-  if (distance > 0 && distance <= distanceThreshold) {
-    lcd.print("Status: ON ");
-    digitalWrite(ledPin, HIGH);
-    digitalWrite(relayPin, HIGH);
-  } else {
-    lcd.print("Status: OFF");
-    digitalWrite(ledPin, LOW);
-    digitalWrite(relayPin, LOW);
-  }
+  lcd.print("L:");
+  lcd.print(gelap ? "Gelap" : "Terang");
+  lcd.print(" D:");
+  if (distance > 0) lcd.print(distance);
+  else lcd.print("X");
 
-  // --- Serial Debug ---
-  Serial.print("Jarak: ");
-  if (distance > 0) Serial.print(distance);
-  else Serial.print("Out of Range");
-  Serial.print(" cm | Gelap: ");
-  Serial.print(gelap ? "YA" : "TIDAK");
-  Serial.print(" | T: ");
-  if (dhtValid) Serial.print(suhu);
-  else Serial.print("Error");
-  Serial.print(" C | H: ");
+  // === Serial to Unity (pakai Serial.write/print) ===
   if (dhtValid) {
-    Serial.print(kelembapan);
-    Serial.println(" %");
+    Serial.print("<");
+    Serial.print("T:"); Serial.print(suhu, 1);
+    Serial.print(",H:"); Serial.print(kelembapan, 0);
+    Serial.print(",J:"); Serial.print(distance);
+    Serial.print(",G:"); Serial.print(gelap ? "1" : "0");
+    Serial.println(">");
   } else {
-    Serial.println("Error");
+    Serial.println("<DHT:ERROR>");
   }
-
-  delay(2000); // Delay untuk refresh data
+  delay(2000); // Refresh interval
 }
